@@ -1,0 +1,58 @@
+service: forex-rmayungon
+
+frameworkVersion: "<=1.26.1"
+
+custom:
+  namespace: ${self:service}-${self:custom.stage}
+  stage: ${opt:stage, self:provider.stage}
+
+provider:
+  name: aws
+  runtime: nodejs4.3
+  stage: dev
+  region: ap-southeast-1
+  environment:
+    CLIENT_ID: '305592088162.314131703815'
+    CLIENT_SECRET: 314bab2328a9e7cb6d239246de88f3a5
+    VERIFICATION_TOKEN: j6zqJdooyL4Eje0neF1DUrxa
+    INSTALL_ERROR_URL: http://forex-rmayungon.s3-website-ap-southeast-1.amazonaws.com/#error
+    INSTALL_SUCCESS_URL: http://forex-rmayungon.s3-website-ap-southeast-1.amazonaws.com/#success
+    NAMESPACE: ${self:custom.namespace}
+    TEAMS_TABLE: ${self:custom.namespace}-teams
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource:
+        - arn:aws:dynamodb:*:*:table/${self:provider.environment.TEAMS_TABLE}
+
+functions:
+  events:
+    handler: events.handler
+    events:
+      - http:
+          path: events
+          method: post
+  install:
+    handler: install.handler
+    events:
+      - http:
+          path: install
+          method: get
+
+resources:
+  Resources:
+    TeamsDynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TEAMS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: team_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: team_id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
